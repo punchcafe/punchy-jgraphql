@@ -1,0 +1,43 @@
+plugins {
+    id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+    id 'java-library'
+    id 'maven-publish'
+    id "io.freefair.lombok" version "5.0.0-rc6"
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'dev.punchcafe'
+            artifactId = 'punchy-jgraphql'
+            version = '0.1.0'
+            from components.java
+        }
+    }
+}
+
+group = 'dev.punchcafe'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '12'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+
+    compileOnly 'org.projectlombok:lombok:1.18.12'
+    annotationProcessor 'org.projectlombok:lombok:1.18.12'
+    implementation 'org.springframework.boot:spring-boot-starter-web:2.3.0.RELEASE'
+    api 'com.graphql-java:graphql-java:11.0' // NEW
+    api 'com.graphql-java:graphql-java-spring-boot-starter-webmvc:1.0' // NEW
+    implementation 'com.google.guava:guava:26.0-jre' // NEW
+    testImplementation('org.springframework.boot:spring-boot-starter-test:') {
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
