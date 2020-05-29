@@ -8,6 +8,7 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -24,9 +25,12 @@ import java.util.stream.Collectors;
 
 @Configuration
 @ConditionalOnClass(GraphQL.class)
+@EnableConfigurationProperties(PunchyConfiguration.class)
 public class GraphQLProvider {
+
     private List<DataFetcherProvider<?>> dataFetcherProviders;
     private QueryDataFetcherProvider queryDataFetcherProvider;
+    private PunchyConfiguration punchyConfiguration;
     private GraphQL graphQL;
 
     @Bean
@@ -35,7 +39,9 @@ public class GraphQLProvider {
     }
 
     @Autowired
-    public GraphQLProvider(List<DataFetcherProvider<?>> dataFetcherProviders) {
+    public GraphQLProvider(List<DataFetcherProvider<?>> dataFetcherProviders,
+                           PunchyConfiguration configuration) {
+        //TODO: should also be able to grab by type? but maybe not necessary
         //TODO: add a proper error if more than one or non found.
         //TODO: add checks to make sure no-one is trying to make a query type
         //TODO: make sure there are no duplicate type names
@@ -46,13 +52,21 @@ public class GraphQLProvider {
         System.out.println(queryFetcher);
         this.queryDataFetcherProvider = (QueryDataFetcherProvider) queryFetcher;
         this.dataFetcherProviders = nonQuery;
+        this.punchyConfiguration = configuration;
     }
 
     @PostConstruct
     public void init() throws IOException {
-        URL url = Resources.getResource("graphqls/student.graphqls");
-        String sdl = Resources.toString(url, Charsets.UTF_8);
-        GraphQLSchema graphQLSchema = buildSchema(sdl);
+        StringBuilder sb = new StringBuilder();
+        if(this.punchyConfiguration == null || this.punchyConfiguration.getSchemaFiles() == null){
+            throw new RuntimeException("Must provide a schema through application properties");
+        }
+        for(String schemaFile : punchyConfiguration.getSchemaFiles()){
+            URL url = Resources.getResource(schemaFile);
+            String sdl = Resources.toString(url, Charsets.UTF_8);
+            sb.append(sdl);
+        }
+        GraphQLSchema graphQLSchema = buildSchema(sb.toString());
         this.graphQL = GraphQL.newGraphQL(graphQLSchema).build();
     }
 
@@ -91,7 +105,7 @@ public class GraphQLProvider {
         return TypeRuntimeWiring.newTypeWiring(specialTypeName).dataFetchers(buildDataFetchersFromInstance(instance));
     }
 
-    private Map<String, DataFetcher> buildDataFetchersFromInstance(DataFetcherProvider<?> instance){
+    private Map<String, DataFetcher> buildDataFetchersFromInstance(DataFetcherProvider<?> instance) {
         System.out.println(instance);
 
         final Map<String, DataFetcher> dataFetchers = new HashMap<>();
