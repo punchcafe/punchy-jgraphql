@@ -1,9 +1,9 @@
 package dev.punchcafe.punchy.jgraphql;
 
 public interface QueryDataFetcherProvider extends DataFetcherProvider<QueryDataFetcherProvider.Query> {
-    class Query implements GraphQLType{
+    class Query implements GraphQLTypeModel {
         @Override
-        public String typeName() {
+        public String getTypeName() {
             return "Query";
         }
     }

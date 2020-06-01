@@ -45,6 +45,13 @@ public class GraphQLProvider {
         //TODO: add a proper error if more than one or non found.
         //TODO: add checks to make sure no-one is trying to make a query type
         //TODO: make sure there are no duplicate type names
+        /**
+         * Grab all {@link GraphQL} types, and create a configuration map between them
+         * and their respective Query Data Fetcher Providers. Build wiring from this,
+         * as it will also allow for fragmented resolvers.
+         *
+         *
+         */
         System.out.println("listing grabbed data providers!");
         System.out.println(dataFetcherProviders);
         final var queryFetcher = dataFetcherProviders.stream().filter(df -> df instanceof QueryDataFetcherProvider).findFirst().orElseThrow();

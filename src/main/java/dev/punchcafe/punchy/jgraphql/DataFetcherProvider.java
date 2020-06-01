@@ -8,7 +8,7 @@ import graphql.schema.DataFetchingEnvironment;
  *
  * @param <T>
  */
-public interface DataFetcherProvider<T extends GraphQLType> {
+public interface DataFetcherProvider<T extends GraphQLTypeModel> {
 
     default T getSource(DataFetchingEnvironment dfe){
         return (T) dfe.getSource();

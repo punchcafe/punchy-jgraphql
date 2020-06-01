@@ -15,7 +15,7 @@ public @interface ComplexField {
     String value();
 
     interface QueryDataFetcherProvider extends DataFetcherProvider<QueryDataFetcherProvider.Query> {
-        class Query implements GraphQLType{
+        class Query implements GraphQLTypeModel {
             @Override
             public String typeName() {
                 return "Query";
