@@ -2,6 +2,7 @@ package dev.punchcafe.punchy.jgraphql;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+import dev.punchcafe.punchy.jgraphql.validation.RuntimeWiringBuilder;
 import graphql.GraphQL;
 import graphql.schema.DataFetcher;
 import graphql.schema.GraphQLSchema;
@@ -17,10 +18,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Configuration
@@ -29,9 +27,10 @@ import java.util.stream.Collectors;
 public class GraphQLProvider {
 
     private List<DataFetcherProvider<?>> dataFetcherProviders;
-    private QueryDataFetcherProvider queryDataFetcherProvider;
     private PunchyConfiguration punchyConfiguration;
     private GraphQL graphQL;
+
+    private Map<DataFetcherProvider, Class<?>> providerToModelClass;
 
     @Bean
     public GraphQL graphQL() {
@@ -54,21 +53,25 @@ public class GraphQLProvider {
          */
         System.out.println("listing grabbed data providers!");
         System.out.println(dataFetcherProviders);
-        final var queryFetcher = dataFetcherProviders.stream().filter(df -> df instanceof QueryDataFetcherProvider).findFirst().orElseThrow();
-        final var nonQuery = dataFetcherProviders.stream().filter(df -> !(df instanceof QueryDataFetcherProvider)).collect(Collectors.toList());
-        System.out.println(queryFetcher);
-        this.queryDataFetcherProvider = (QueryDataFetcherProvider) queryFetcher;
-        this.dataFetcherProviders = nonQuery;
+        this.dataFetcherProviders = dataFetcherProviders;
+        this.providerToModelClass = dataFetcherProviders.stream().collect(Collectors.toMap(dfp -> dfp, this::getModelClassFromDataFetcherProvider));
         this.punchyConfiguration = configuration;
+    }
+
+    private Class getModelClassFromDataFetcherProvider(DataFetcherProvider provider) {
+        //TODO: make this smarter
+        System.out.println("INTERFACES");
+        System.out.println(provider.getClass().getGenericInterfaces()[0]);
+        return (Class) (((ParameterizedType) provider.getClass().getGenericInterfaces()[0]).getActualTypeArguments()[0]);
     }
 
     @PostConstruct
     public void init() throws IOException {
         StringBuilder sb = new StringBuilder();
-        if(this.punchyConfiguration == null || this.punchyConfiguration.getSchemaFiles() == null){
+        if (this.punchyConfiguration == null || this.punchyConfiguration.getSchemaFiles() == null) {
             throw new RuntimeException("Must provide a schema through application properties");
         }
-        for(String schemaFile : punchyConfiguration.getSchemaFiles()){
+        for (String schemaFile : punchyConfiguration.getSchemaFiles()) {
             URL url = Resources.getResource(schemaFile);
             String sdl = Resources.toString(url, Charsets.UTF_8);
             sb.append(sdl);
@@ -79,31 +82,31 @@ public class GraphQLProvider {
 
     private GraphQLSchema buildSchema(String sdl) {
         TypeDefinitionRegistry typeRegistry = new SchemaParser().parse(sdl);
-        RuntimeWiring runtimeWiring = this.buildRuntimeWiring();
+        RuntimeWiring runtimeWiring = this.buildRuntimeWiring(typeRegistry);
         SchemaGenerator schemaGenerator = new SchemaGenerator();
         return schemaGenerator.makeExecutableSchema(typeRegistry, runtimeWiring);
     }
 
-    private RuntimeWiring buildRuntimeWiring() {
-        final RuntimeWiring.Builder builder = RuntimeWiring.newRuntimeWiring();
-        builder.type(buildSpecialWiringFromInstance(this.queryDataFetcherProvider, "Query"));
-        for (DataFetcherProvider<?> dataFetcherProvider : this.dataFetcherProviders) {
-            builder.type(buildWiringFromInstance(dataFetcherProvider));
-        }
-        return builder.build();
+    private RuntimeWiring buildRuntimeWiring(TypeDefinitionRegistry registry) {
+        System.out.println();
+        System.out.println(String.format("Type Definition registry: %s", registry));
+        System.out.println(String.format("Type Definition registry schema: %s", registry.types().get("Query").getChildren()));
+        return RuntimeWiringBuilder.runtimeWiring(registry, providerToModelClass, dataFetcherProviders);
     }
-
+/*
     private TypeRuntimeWiring.Builder buildWiringFromInstance(DataFetcherProvider instance) {
         System.out.println(instance.getClass().getGenericInterfaces());
         final Class type = (Class) (((ParameterizedType) instance.getClass().getGenericInterfaces()[0]).getActualTypeArguments()[0]);
         String typeName;
         try {
-            typeName = type.getMethod("typeName").invoke(null).toString();
+            typeName = type.getAnnotation(GraphQLTypeModel.class).typeName();
         } catch (Exception ex) {
             typeName = type.getSimpleName();
         }
         return TypeRuntimeWiring.newTypeWiring(typeName).dataFetchers(buildDataFetchersFromInstance(instance));
     }
+
+ */
 
     private TypeRuntimeWiring.Builder buildSpecialWiringFromInstance(DataFetcherProvider instance, String specialTypeName) {
         System.out.println(instance);

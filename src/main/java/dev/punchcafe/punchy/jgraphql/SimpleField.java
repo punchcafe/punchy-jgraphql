@@ -6,11 +6,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Indicates the method returns a {@link graphql.schema.DataFetcher} used to resolve a
- * complex GraphQL field, specified by the value assigned to the annotation.
+ * indicates a field (or gettter or setter) is the POJO field on the {@link GraphQLTypeModel} for resolving that simple field.
  */
-@Target(ElementType.METHOD)
+@Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ComplexField {
+public @interface SimpleField {
     String value();
+
+    String methodName() default "";
 }
