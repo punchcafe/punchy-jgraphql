@@ -173,8 +173,8 @@ public class RuntimeWiringBuilder {
      */
     private Method getSimpleFieldProvider(Class<?> clazz, String fieldName) {
         System.out.println(String.format("getting simple field providers for field %s in class %s", fieldName, clazz));
-        final List<Method> fieldProviderMethods = Arrays.stream(clazz.getMethods()).filter(method -> method.isAnnotationPresent(SimpleField.class)).collect(Collectors.toList());
-        final List<Field> fieldProviderFields = Arrays.stream(clazz.getDeclaredFields()).filter(field -> field.isAnnotationPresent(SimpleField.class)).collect(Collectors.toList());
+        final List<Method> fieldProviderMethods = Arrays.stream(clazz.getMethods()).filter(method -> method.isAnnotationPresent(SimpleField.class)).filter(method -> fieldName.equals(method.getAnnotation(SimpleField.class).value())).collect(Collectors.toList());
+        final List<Field> fieldProviderFields = Arrays.stream(clazz.getDeclaredFields()).filter(field -> field.isAnnotationPresent(SimpleField.class)).filter(method -> fieldName.equals(method.getAnnotation(SimpleField.class).value())).collect(Collectors.toList());
 
         if (fieldProviderFields.size() == 0 && fieldProviderMethods.size() == 0) {
             System.out.println("none were found");
@@ -202,7 +202,7 @@ public class RuntimeWiringBuilder {
             try {
                 return clazz.getMethod(methodName);
             } catch (NoSuchMethodException e) {
-                throw new RuntimeException("could not find method: %s on class %s");
+                throw new RuntimeException(String.format("could not find method: %s on class %s", methodName, clazz));
             }
         }
     }
